@@ -6,14 +6,30 @@ POST http:/localhost:5000/users
 Content-Type: application/json
 
 {
-    "name" : "Nanang Aditya",
-    "email" : "admin@gmail.com",
-    "password" : "admin123",
-    "confPassword" : "admin123"
+    "name": "Nanang",
+    "email": "member@gmail.com",
+    "password": "123456",
+    "confPassword": "123456",
+    "role": "member"
 }
 
 ###
 get http:/localhost:5000/token
 
 ###
-DELETE  http:/localhost:5000/logout
+// update user menggunakan uuid
+PATCH http://localhost:5000/users/51165ce4-c6b5-4616-a82e-7cffd9e1db64
+Content-Type: application/json
+
+{
+    "name": "aditya",
+    "email": "superadmin@gmail.com",
+    "password": "",
+    "confPassword": "",
+    "role": "superadmin"
+}
+
+###
+# Delete user menggunakan uuid
+DELETE http://localhost:5000/users/51165ce4-c6b5-4616-a82e-7cffd9e1db64
+

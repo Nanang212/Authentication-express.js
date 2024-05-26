@@ -3,77 +3,116 @@ import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 export const getUsers = async (req, res) => {
   try {
-    const users = await Users.findAll();
-    res.json(users);
+    const response = await Users.findAll({
+      attributes: ["uuid", "name", "email", "role"],
+    });
+    res.status(200).json(response);
   } catch (error) {
-    console.error(error);
+    res.status(500).json({ msg: error.message });
+  }
+};
+export const getUserById = async (req, res) => {
+  try {
+    const response = await Users.findOne({
+      attributes: ["uuid", "name", "email", "role"],
+      where: {
+        uuid: req.params.id,
+      },
+    });
+    res.status(200).json(response);
+  } catch (error) {
+    res.status(500).json({ msg: error.message });
   }
 };
 
-export const register = async (req, res) => {
-  const { name, email, password, confPassword } = req.body;
+export const createUser = async (req, res) => {
+  const { name, email, password, confPassword, role } = req.body;
+
   if (password !== confPassword)
-    return res.status(400).json({ msg: "Passwords do not match" });
+    return res
+      .status(400)
+      .json({ msg: "Password and Confirm Password do not match" });
+
+  // Check if the logged-in user has sufficient privileges to create the specified role
+  if (role === "admin" && req.user.role !== "superadmin") {
+    return res
+      .status(400)
+      .json({ msg: "You do not have permission to create an admin user" });
+  }
+
+  if (role === "superadmin") {
+    return res
+      .status(400)
+      .json({ msg: "You do not have permission to create a superadmin user" });
+  }
 
   try {
-    const salt = await bcrypt.genSalt();
-    const hashPassword = await bcrypt.hash(password, salt);
-
+    const hashPassword = await bcrypt.hash(password, 10); // Salting with 10 rounds
     await Users.create({
       name: name,
       email: email,
       password: hashPassword,
+      role: role,
     });
-
-    res.json({ msg: "Registration Successful" });
+    res.status(201).json({ msg: "Registration Successful" });
   } catch (error) {
-    console.error("Registration failed:", error);
-    res.status(500).json({ msg: "Registration failed" });
+    res.status(400).json({ msg: error.message });
   }
 };
 
-export const login = async (req, res) => {
+export const updateUser = async (req, res) => {
+  const user = await Users.findOne({
+    where: {
+      uuid: req.params.id,
+    },
+  });
+  if (!user) return res.status(404).json({ msg: "User not found" });
+  const { name, email, password, confPassword, role } = req.body;
+  let hashPassword;
+  if (password === "" || password === null) {
+    hashPassword = user.password;
+  } else {
+    hashPassword = await bcrypt.hash(password, 10);
+  }
+  if (password !== confPassword)
+    return res
+      .status(400)
+      .json({ msg: "Password and Confirm Password do not match" });
   try {
-    const user = await Users.findAll({
-      where: { email: req.body.email },
-    });
-    const match = await bcrypt.compare(req.body.password, user[0].password);
-    if (!match) return res.status(400).json({ msg: "wrong password" });
-    const userId = user[0].id;
-    const name = user[0].name;
-    const email = user[0].email;
-    const accessToken = jwt.sign(
-      {
-        userId,
-        name,
-        email,
-      },
-      process.env.ACCESS_TOKEN_SECRET,
-      { expiresIn: "20S" }
-    );
-    const refreshToken = jwt.sign(
-      {
-        userId,
-        name,
-        email,
-      },
-      process.env.refresh_TOKEN_SECRET,
-      { expiresIn: "1d" }
-    );
     await Users.update(
-      { refresh_token: refreshToken },
+      {
+        name: name,
+        email: email,
+        password: hashPassword,
+        role: role,
+      },
       {
         where: {
-          id: userId,
+          id: user.id,
         },
       }
     );
-    res.cookie("refreshToken", refreshToken, {
-      httpOnly: true,
-      maxAge: 24 * 60 * 60 * 1000,
-    });
-    res.json({ accessToken });
+    res.status(200).json({ msg: "User Updated" });
   } catch (error) {
-    res.status(404).json({ msg: "email not found" });
+    res.status(400).json({ msg: error.message });
+  }
+};
+
+export const deleteUser = async (req, res) => {
+  const user = await Users.findOne({
+    where: {
+      uuid: req.params.id,
+    },
+  });
+  if (!user) return res.status(404).json({ msg: "User not found" });
+  try {
+    await Users.destroy({
+      where: {
+        id: user.id,
+      },
+    });
+    res.status(200).json({ msg: "User Deleted" });
+  } catch (error) {
+    res.status(400).json({ msg: error.message });
   }
 };

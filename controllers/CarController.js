@@ -18,6 +18,7 @@ const __dirname = path.dirname(new URL(import.meta.url).pathname);
 
 export const getCars = async (req, res) => {
   try {
+    // Mengambil daftar mobil dari database
     let response;
     response = await Cars.findAll({
       where: {
@@ -39,19 +40,23 @@ export const getCars = async (req, res) => {
       include: [
         {
           model: Users,
-          attributes: [
-            "id",
-            "uuid",
-            "name",
-            "email",
-            "role",
-            "createdAt",
-            "updatedAt",
-          ],
+          as: "createdByUser", // Gunakan alias yang telah ditentukan
+          attributes: ["id", "uuid", "name", "email", "role"],
+        },
+        {
+          model: Users,
+          as: "updatedByUser", // Gunakan alias yang telah ditentukan
+          attributes: ["id", "uuid", "name", "email", "role"],
+        },
+        {
+          model: Users,
+          as: "deletedByUser", // Gunakan alias yang telah ditentukan
+          attributes: ["id", "uuid", "name", "email", "role"],
         },
       ],
     });
 
+    // Mengembalikan daftar mobil
     res.status(200).json(response);
   } catch (error) {
     res.status(500).json({ msg: error.message });
@@ -96,11 +101,12 @@ export const createCar = async (req, res) => {
       images: imageName,
       userId: req.userId,
       createdBy: req.userId,
+      is_deleted: 0, // Set is_deleted ke 0 saat menambahkan mobil baru
     });
-    res.status(201).json({ msg: "Car Created Successfuly" });
+    res.status(201).json({ msg: "Car Created Successfully" });
   } catch (error) {
     res.status(500).json({ msg: error.message });
-    console.log("apaaa yaa", error);
+    console.log("Error:", error);
   }
 };
 
@@ -113,30 +119,37 @@ export const updateCar = async (req, res) => {
     });
 
     if (!car) return res.status(404).json({ msg: "Data tidak ditemukan" });
+
     const { model, rentPerDay } = req.body;
 
-    // cek gambar
+    // Update gambar jika tersedia
     if (req.file && req.file.filename) {
       const imageUrl = req.file.path;
       car.images = imageUrl;
-      console.log("tesssssss url img", imageUrl);
     }
+
+    // Periksa role pengguna untuk izin
     if (req.role !== "member") {
+      // Lakukan pembaruan mobil
       await Cars.update(
-        { model, rentPerDay, images: car.images, updatedBy: req.userId },
+        {
+          model,
+          rentPerDay,
+          images: car.images,
+          updatedBy: req.userId, // Set updatedBy ke id pengguna saat ini
+        },
         {
           where: {
-            id: car.id,
+            uuid: req.params.id,
           },
         }
       );
+
+      res.status(200).json({ msg: "Car updated successfully" });
     } else {
-      if (req.role === "member")
-        return res
-          .status(403)
-          .json({ msg: "Akses hanya untuk Superadmin & Admin" });
+      // Jika pengguna adalah member, kirim respons dengan pesan akses ditolak
+      return res.status(403).json({ msg: "Akses ditolak" });
     }
-    res.status(200).json({ msg: "Car updated successfuly" });
   } catch (error) {
     res.status(500).json({ msg: error.message });
   }

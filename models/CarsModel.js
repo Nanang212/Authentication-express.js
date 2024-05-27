@@ -62,7 +62,13 @@ const Cars = db.define(
   }
 );
 
-Users.hasMany(Cars);
+// Menyesuaikan hubungan antara model Cars dan Users
 Cars.belongsTo(Users, { foreignKey: "userId" });
+Cars.belongsTo(Users, { foreignKey: "createdBy", as: "createdByUser" });
+Cars.belongsTo(Users, { foreignKey: "updatedBy", as: "updatedByUser" });
+Cars.belongsTo(Users, { foreignKey: "deletedBy", as: "deletedByUser" });
+
+// Menambahkan hubungan hasMany dari Users ke Cars
+Users.hasMany(Cars);
 
 export default Cars;

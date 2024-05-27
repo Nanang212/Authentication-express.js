@@ -21,9 +21,6 @@ export const getCars = async (req, res) => {
     // Mengambil daftar mobil dari database
     let response;
     response = await Cars.findAll({
-      where: {
-        is_deleted: 0,
-      },
       attributes: [
         "id",
         "uuid",

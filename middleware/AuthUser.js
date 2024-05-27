@@ -13,6 +13,19 @@ const getUserById = async (userId) => {
   }
 };
 
+// Middleware untuk memeriksa apakah pengguna telah login
+export const loggedIn = (req, res, next) => {
+    try {
+      if (!req.session.userId) {
+        return res.status(401).json({ msg: "Mohon login ke akun Anda!" });
+      }
+      next();
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ msg: "Internal Server Error" });
+    }
+  };
+
 // Middleware untuk memverifikasi autentikasi pengguna
 export const verifyUser = async (req, res, next) => {
   try {

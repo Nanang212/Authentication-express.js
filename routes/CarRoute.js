@@ -7,7 +7,11 @@ import {
   updateCar,
   deleteCar,
 } from "../controllers/CarController.js";
-import { verifyUser, superAdminAndAdmin } from "../middleware/AuthUser.js";
+import {
+  verifyUser,
+  superAdminAndAdmin,
+  loggedIn,
+} from "../middleware/AuthUser.js";
 import { verifyToken } from "../middleware/VerifyToken.js";
 
 const router = express.Router();
@@ -21,7 +25,7 @@ const storage = multer.diskStorage({
 });
 const upload = multer({ storage: storage });
 
-router.get("/cars", verifyToken, verifyUser, getCars);
+router.get("/cars", verifyToken, verifyUser, loggedIn, getCars);
 router.get("/cars/:id", verifyToken, verifyUser, getCarById);
 router.post(
   "/cars",
